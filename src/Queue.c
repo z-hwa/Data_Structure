@@ -1,47 +1,46 @@
-#ifndef QUEUE
-#define QUEUE
-
 #include<stdio.h>
 #include<stdlib.h>
 
-typedef struct Node Node;
-typedef struct Queue Queue;
+//指針
+typedef struct Node* nodePointer;
+typedef struct Queue* queuePointer;
 
-struct Node {
+//本體
+typedef struct Node {
 	int data;
-	Node* previous;
-};
-
-struct Queue {
-	Node* front;	//指向前方
-	Node* rear;		//指向尾巴
+	nodePointer previous;
+} Node;
+typedef struct Queue {
+	nodePointer front;	//指向前方
+	nodePointer rear;		//指向尾巴
 
 	int nowElementNum;	//現在存放的元素數量
-};
+} Queue;
 
 //推出queue front的節點
-Node* Delete(Queue*);
+nodePointer Delete(queuePointer);
 //推入節點到queue rear
-void Add(Queue*, Node*);
+void Add(queuePointer, nodePointer);
 //檢查當前的queue是否為空 是回傳1 否回傳0
-int IsEmpty(Queue*);
+int IsEmpty(queuePointer);
 
 //節點的建構子 解構子
-Node* NodeNew(int);
-void FreeNode(Node*);
+nodePointer NodeNew(int);
+void FreeNode(nodePointer);
 
-Queue* QueueNew();
+//Queue的建構子
+queuePointer QueueNew();
 
 int main() {
 
-	Queue* q = QueueNew();
+	queuePointer q = QueueNew();
 
 	for (int i = 0; i < 5; i++) {
 		Add(q, NodeNew(i));
 	}
 
 	for (int i = 0; i < 5; i++) {
-		Node* p = Delete(q);
+		nodePointer p = Delete(q);
 		printf("%d\n", p->data);
 		FreeNode(p);
 	}
@@ -49,10 +48,10 @@ int main() {
 	return 0;
 }
 
-Node* Delete(Queue* q) {
+nodePointer Delete(queuePointer q) {
 	//如果隊列非空
 	if (IsEmpty(q) == 0) {
-		Node* p = q->front;		//紀錄當前隊列最前方的節點
+		nodePointer p = q->front;		//紀錄當前隊列最前方的節點
 
 		if(p != NULL) q->front = p->previous;		//將現在隊列的最前方改為原頭部的上一個人
 		q->nowElementNum--;
@@ -64,15 +63,15 @@ Node* Delete(Queue* q) {
 	}
 }
 
-int IsEmpty(Queue* q) {
+int IsEmpty(queuePointer q) {
 	if (q->nowElementNum == 0) return 1;	//空的 回傳1
 	else return 0;
 }
 
-void Add(Queue* q, Node* n) {
+void Add(queuePointer q, nodePointer n) {
 	if (n == NULL) return;
 
-	Node* p = q->rear;	//將當前的尾巴節點記錄下來
+	nodePointer p = q->rear;	//將當前的尾巴節點記錄下來
 
 	if(p != NULL) p->previous = n;	//將p的上一個點設置為新的節點n
 	q->rear = n;	//將尾巴標記設置為新的節點n
@@ -83,8 +82,8 @@ void Add(Queue* q, Node* n) {
 	q->nowElementNum++;		//將q中的元素計量+1
 }
 
-Node* NodeNew(int data) {
-	Node* n = (Node*)malloc(sizeof(Node));	//分配記憶體空間給Node
+nodePointer NodeNew(int data) {
+	nodePointer n = (nodePointer)malloc(sizeof(Node));	//分配記憶體空間給Node
 
 	n->data = data;
 	n->previous = NULL;
@@ -92,12 +91,12 @@ Node* NodeNew(int data) {
 	return n;
 }
 
-void FreeNode(Node* n) {
+void FreeNode(nodePointer n) {
 	free(n);
 }
 
-Queue* QueueNew() {
-	Queue* q = (Queue*)malloc(sizeof(Queue));
+queuePointer QueueNew() {
+	queuePointer q = (queuePointer)malloc(sizeof(Queue));
 
 	q->nowElementNum = 0;
 	q->front = NULL;
@@ -105,5 +104,3 @@ Queue* QueueNew() {
 
 	return q;
 }
-
-#endif

@@ -1,6 +1,3 @@
-#ifndef LINKEDLIST
-#define LINKEDLIST
-
 #include<stdio.h>
 #include<stdlib.h>
 
@@ -117,5 +114,3 @@ int Insert(linkedList* ll, const char data, const char target) {
 		return 1;
 	}
 }
-
-#endif

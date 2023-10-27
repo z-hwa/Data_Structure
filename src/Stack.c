@@ -1,6 +1,3 @@
-#ifndef STACK
-#define STACK
-
 #include<stdio.h>
 #include<stdlib.h>
 
@@ -88,5 +85,3 @@ Node* Top(Stack* s) {
 		return NULL;
 	}
 }
-
-#endif

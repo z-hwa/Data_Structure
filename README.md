@@ -8,3 +8,4 @@ which used to record my code which coded when I learned data structure
 * Stack: Pop, Push, IsEmpty, Top  
 * Queue: delete, add, IsEmpty  
 * LinkedList: Get, Delete, IsEmpty, Insert
+* BinaryTree: PreorderTraversal, FindHeight, InsertComplete
