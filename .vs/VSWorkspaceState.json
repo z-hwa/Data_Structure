@@ -1,9 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\includeFile",
     "\\src"
   ],
-  "SelectedNode": "\\src\\LinkedList.c",
+  "SelectedNode": "\\src\\BinaryTree.c",
   "PreviewInSolutionExplorer": false
 }

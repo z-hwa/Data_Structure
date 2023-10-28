@@ -9,3 +9,4 @@ which used to record my code which coded when I learned data structure
 * Queue: delete, add, IsEmpty  
 * LinkedList: Get, Delete, IsEmpty, Insert
 * BinaryTree: PreorderTraversal, FindHeight, InsertComplete
+* BinarySearchTree: PreorderTraversal, Insert, Delete
