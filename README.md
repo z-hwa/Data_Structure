@@ -10,3 +10,7 @@ which used to record my code which coded when I learned data structure
 * LinkedList: Get, Delete, IsEmpty, Insert
 * BinaryTree: PreorderTraversal, FindHeight, InsertComplete
 * BinarySearchTree: PreorderTraversal, Insert, Delete
+* Heap: Insert
+
+## Log
+2023/10/29	Heap::Insert
