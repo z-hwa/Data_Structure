@@ -1,31 +1,35 @@
 #include<stdio.h>
 #include<stdlib.h>
 
-typedef struct Node* treePointer;	//節點指針
+typedef long long lld;
+
+typedef struct Node* TreePointer;	//節點指針
 typedef struct Node {
 	int key;
 	//int value;
-	treePointer leftChild, rightChild;
+	TreePointer leftChild, rightChild;
 } node;  //節點
 
+typedef struct BinarySearchTree* BSTP;
 typedef struct BinarySearchTree {
-	treePointer root;
+	TreePointer root;
 }BST;   //二元搜尋樹
 
-void Insert(BST*, const treePointer);
-treePointer NewTreePointer(const int);
-void Delete(BST* bst, const int key);
+void Insert(BSTP bst, const TreePointer newNode);
+TreePointer NewTreePointer(const lld);
+void Delete(BSTP bst, const int key);
+void CopyNode(TreePointer a, const TreePointer b);
 
 //traversal the binary search tree
 void PreorderTraversal(const BST);
-void RecurPreorder(const treePointer);
+void RecurPreorder(const TreePointer);
 
 int main() {
 
 	BST* bst = (BST*)malloc(sizeof(BST));
 
 	for (int i = 0; i < 5; i++) {
-		treePointer tp = NewTreePointer(i);	//create new tree node
+		TreePointer tp = NewTreePointer(i);	//create new tree node
 
 		Insert(bst, tp);	//put into binary search tree
 	}
@@ -38,14 +42,15 @@ int main() {
 }
 
 //插入一個節點(假設key不重複
-void Insert(BST* bst, const treePointer newNode) {
+void Insert(BSTP bst, const TreePointer newNode) {
+
 	//如果樹是空的 直接插入在根節點
 	if (bst->root == NULL) {
 		bst->root = newNode;
 	}
 	else {
-		int key = newNode->key;	//取得key
-		treePointer tp = bst->root;	//新增指針指向根節點
+		lld key = newNode->key;
+		TreePointer tp = bst->root;	//新增指針指向根節點
 
 		//向下開始塞
 		while (tp != NULL)
@@ -79,8 +84,8 @@ void Insert(BST* bst, const treePointer newNode) {
 }
 
 //回傳一個新的樹節點
-treePointer NewTreePointer(const int key) {
-	treePointer tp = (treePointer)malloc(sizeof(node));
+TreePointer NewTreePointer(const lld key) {
+	TreePointer tp = (TreePointer)malloc(sizeof(node));
 	tp->key = key;
 	tp->leftChild = NULL;
 	tp->rightChild = NULL;
@@ -89,12 +94,12 @@ treePointer NewTreePointer(const int key) {
 }
 
 //Delete node by key from binary search tree
-void Delete(BST* bst, const int key) {
+void Delete(BSTP bst, const int key) {
 	//this binary search tree is empty
 	if (bst->root == NULL) return;
 	
-	treePointer p = bst->root;	//create a pointer 'p' pointed to root of tree
-	treePointer parentP = NULL;	//trace parent of p
+	TreePointer p = bst->root;	//create a pointer 'p' pointed to root of tree
+	TreePointer parentP = NULL;	//trace parent of p
 
 	//if p is not empty pointer
 	//and the node key which pointed by 'p' doesn't equal to key
@@ -125,12 +130,10 @@ void Delete(BST* bst, const int key) {
 		else if (parentP == NULL) {
 			bst->root = NULL;
 		}
-
-		free(p);
 	}
 	else if (p->leftChild != NULL && p->rightChild == NULL) {
 		//a 1-degree node
-		treePointer childOfP = p->leftChild;	//trace child of p
+		TreePointer childOfP = p->leftChild;	//trace child of p
 
 		//if p has parent change parent's child
 		if (parentP != NULL && parentP->rightChild == p) parentP->rightChild = childOfP;
@@ -141,7 +144,7 @@ void Delete(BST* bst, const int key) {
 	}
 	else if (p->leftChild == NULL && p->rightChild != NULL) {
 		//a 1-degree node
-		treePointer childOfP = p->rightChild;	//trace child of p
+		TreePointer childOfP = p->rightChild;	//trace child of p
 
 		//if p has parent change parent's child
 		if (parentP != NULL && parentP->rightChild == p) parentP->rightChild = childOfP;
@@ -155,20 +158,30 @@ void Delete(BST* bst, const int key) {
 		//replace p node by max key in left child
 		//next, delete the child(which must be 0 or 1 degree node
 
-		treePointer maxIn_LeftChild = p->leftChild;
+		TreePointer maxIn_LeftChild = p->leftChild;
 		while (maxIn_LeftChild->rightChild != NULL) {
 			maxIn_LeftChild = maxIn_LeftChild->rightChild;	//持續找右邊的子節點
 		}
 
 		//RecordData of the chlld
-		int childKey = maxIn_LeftChild->key;
+		TreePointer temp = (TreePointer)malloc(sizeof(node));
+		CopyNode(temp, maxIn_LeftChild);
 
-		Delete(bst, childKey);	//delete child
+		Delete(bst, maxIn_LeftChild->key);	//delete child
 		
 		//set data of p as the child
-		p->key = childKey;
+		CopyNode(p, temp);
+
+		return;
 	}
 
+	free(p);
+	return;
+}
+
+//copy function of node
+void CopyNode(TreePointer a, const TreePointer b) {
+	a->key = b->key;
 	return;
 }
 
@@ -178,7 +191,7 @@ void PreorderTraversal(const BST tree) {
 }
 
 //前序遍歷的遞迴區塊
-void RecurPreorder(const treePointer tp) {
+void RecurPreorder(const TreePointer tp) {
 	//如果這個節點非空
 	if (tp != NULL) {
 		printf("%d", tp->key);
