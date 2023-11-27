@@ -80,6 +80,7 @@ int main() {
 	return 0;
 }
 
+//final api for add data
 void AddData(F_heapP heap, BSTP bst, const lld key, const lld value) {
 	F_nodeP np = Insert(heap, key, value);
 	TreePointer tp = NewTreePointer(key, value, np);
@@ -88,7 +89,9 @@ void AddData(F_heapP heap, BSTP bst, const lld key, const lld value) {
 	return;
 }
 
-//delete node from fheap
+/*final api for delete
+delete node from fheap
+*/
 void Delete(F_heapP heap, BSTP bst, const lld key, const lld value) {
 	TreePointer tp = Search(bst, key, value);	//get node from binary search tree;
 	if (tp == NULL) return;
@@ -135,6 +138,11 @@ void Delete(F_heapP heap, BSTP bst, const lld key, const lld value) {
 		}
 	}
 	
+}
+
+//decrease key value of specify node
+void DecreaseKey(F_heapP heap, BSTP bst, const lld key, const lld value, const lld newkey) {
+
 }
 
 //show top-level circular list
