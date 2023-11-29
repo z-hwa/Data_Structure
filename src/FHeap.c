@@ -17,11 +17,6 @@ typedef struct FNode {
 	lld value;
 }FNode;	//節點原型
 
-typedef struct FHeap* F_heapP;
-typedef struct FHeap {
-	F_nodeP root;
-} FHeap;  //Fheap原型
-
 typedef struct Node* TreePointer;	//節點指針
 typedef struct Node {
 	lld key;
@@ -35,6 +30,12 @@ typedef struct BinarySearchTree {
 	TreePointer root;
 }BST;   //二元搜尋樹
 
+typedef struct FHeap* F_heapP;
+typedef struct FHeap {
+	F_nodeP root;
+	BSTP bst;	//bst tree used to search data from feap
+} FHeap;  //Fheap原型
+
 F_nodeP CreateNode(const lld key, const lld value);
 F_nodeP Insert(F_heapP heap, const lld key, const lld value);
 void PutNodeInCir(F_nodeP root, F_nodeP newNode);
@@ -44,7 +45,7 @@ F_nodeP ReturnMinTree(const F_nodeP a);
 void DeleteMin(F_heapP heap, int show);
 void ShowTop(const F_heapP heap, const int n);
 void ShowTopValue(const F_heapP heap, const int n);
-void Delete(F_heapP heap, BSTP bst, const lld key, const lld value);
+void Delete(F_heapP heap, const lld key, const lld value);
 
 /*binary search tree*/
 
@@ -55,33 +56,19 @@ void CopyNode(TreePointer a, const TreePointer b);
 BSTP CreateBST();
 TreePointer Search(BSTP bst, const lld key, const lld value);
 
-void AddData(F_heapP heap, BSTP bst, const lld key, const lld value);
+void AddData(F_heapP heap, const lld key, const lld value);
 
 int main() {
 
 	F_heapP heap = CreateFHeap();
-	BSTP bst = CreateBST();
-
-	AddData(heap, bst, 40, 20);
-	AddData(heap, bst, 40, 30);
-	AddData(heap, bst, 40, 40);
-	AddData(heap, bst, 40, 50);
-
-	ShowTopValue(heap, 5);
-
-	Delete(heap, bst, 30, 50);
-
-	ShowTopValue(heap, 5);
-
-	Delete(heap, bst, 40, 50);
-
-	ShowTopValue(heap, 5);
 
 	return 0;
 }
 
 //final api for add data
-void AddData(F_heapP heap, BSTP bst, const lld key, const lld value) {
+void AddData(F_heapP heap, const lld key, const lld value) {
+	BSTP bst = heap->bst;	//get bst tree from FHeap
+	
 	F_nodeP np = Insert(heap, key, value);
 	TreePointer tp = NewTreePointer(key, value, np);
 	InsertBST(bst, tp);
@@ -92,7 +79,9 @@ void AddData(F_heapP heap, BSTP bst, const lld key, const lld value) {
 /*final api for delete
 delete node from fheap
 */
-void Delete(F_heapP heap, BSTP bst, const lld key, const lld value) {
+void Delete(F_heapP heap, const lld key, const lld value) {
+	BSTP bst = heap->bst;	//get bst tree from FHeap
+	
 	TreePointer tp = Search(bst, key, value);	//get node from binary search tree;
 	if (tp == NULL) return;
 
@@ -426,7 +415,10 @@ F_nodeP CreateNode(const lld key, const lld value) {
 //create default FHeap
 F_heapP CreateFHeap() {
 	F_heapP heap = (F_heapP)malloc(sizeof(FHeap));
+	
+	//init FHeap
 	heap->root = NULL;
+	heap->bst = CreateBST();	//init bst tree in FHeap
 
 	return heap;
 }
