@@ -115,14 +115,18 @@ void Delete(F_heapP heap, const lld key, const lld value) {
 	
 	if(pointer != leftS){
 		//has sibling
+		pointer->leftS = pointer->rightS = pointer;
 		
 		//remove node from it's sibling
 		leftS->rightS = rightS;
-		rightS->leftS = leftS;		
+		rightS->leftS = leftS;
 	}
 
-
-	if(parent != NULL) parent->child = NULL;	//parent's child change to NULL	
+	//if parent exist and this node has no sibling
+	if(parent != NULL && parent->child == pointer) {
+		if(pointer == leftS) parent->child = NULL;	//parent's child change to NULL	
+		else parent->child = leftS;	//has sibling change parent's child to sibling
+	}
 
 	if(child != NULL) {
 		//has child
@@ -175,10 +179,33 @@ void DecreaseKey(F_heapP heap, const lld key, const lld value, const lld newkey)
 			//newkey is smaller than parent
 			//after decrease node
 			//remove the node from its sibling
+			pointer->key = newkey;
 
+			//get sibling pointer of pointer
+			F_nodeP leftS, rightS;
+			leftS = pointer->leftS;
+			rightS =pointer->rightS;
 
-			heap->root = ReturnMinTree(heap->root);	//after moving child to top-level => reset min tree
-			return;
+			if(pointer != leftS) {
+				//has sibling
+			
+				pointer->leftS = pointer->rightS = pointer;
+
+				//removed node from circular list
+				leftS->rightS = rightS;
+				rightS->leftS = leftS;
+				
+				if(parent->child == pointer) parent->child = leftS;	//reset parent's child
+				
+				heap->root = Meld(heap->root, pointer);		//meld pointer into top-level
+			}
+			else {
+				pointer->leftS = pointer->rightS = pointer;
+
+				parent->child = NULL;	//set parent's child into null
+
+				heap->root = Meld(heap->root, pointer);	
+			}
 		}
 	}
 
