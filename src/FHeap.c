@@ -45,7 +45,10 @@ F_nodeP ReturnMinTree(const F_nodeP a);
 void DeleteMin(F_heapP heap, int show);
 void ShowTop(const F_heapP heap, const int n);
 void ShowTopValue(const F_heapP heap, const int n);
+void MoveFromLevelToTop(F_heapP heap, F_nodeP pointer, const int mode);
+void CascadingCut(F_heapP heap, F_nodeP pointer);
 void Delete(F_heapP heap, const lld key, const lld value);
+void DecreaseKey(F_heapP heap, const lld key, const lld value, const lld newkey);
 
 /*binary search tree*/
 
@@ -69,7 +72,7 @@ int main() {
 
 	ShowTop(heap, 5);
 
-	Delete(heap, 4, 4);
+	DecreaseKey(heap, 4, 4, 0);
 
 	ShowTop(heap, 5);	
 
@@ -88,7 +91,59 @@ void AddData(F_heapP heap, const lld key, const lld value) {
 	TreePointer tp = NewTreePointer(key, value, np);
 	InsertBST(bst, tp);
 
+}
+
+/*remove node from  its level
+* mode 1 move tree includeroot
+* mode 2 move subtree
+*/
+void MoveFromLevelToTop(F_heapP heap, F_nodeP pointer, const int mode) {
+	F_nodeP parent = pointer->parent;	//used to chekc child's relation of parent
+	F_nodeP child = pointer->child;
+
+	//get sibling pointer of pointer
+	F_nodeP leftS, rightS;
+	leftS = pointer->leftS;
+	rightS = pointer->rightS;
+
+	//if pointer has sibling, move it out to circular list
+	if (pointer != leftS) {
+		//removed node from circular list
+		leftS->rightS = rightS;
+		rightS->leftS = leftS;
+	}
+
+	//reset pointer's relation of sibling
+	pointer->leftS = pointer->rightS = pointer;
+
+	//reset parent's relation of child
+	if (parent != NULL && parent->child == pointer) {
+		if (pointer == leftS) parent->child = leftS;	//reset parent's child
+		else parent->child = NULL;	//set parent's child into null
+	}
+
+	if(mode == 1) heap->root = Meld(heap->root, pointer);	//merge remove tree to top-level
+	else if(mode == 2 && child != NULL) heap->root = Meld(heap->root, child);	//move child of this node to top-level	
+																				//will reset child's parent to NULL in ReturnMinTree()
+
 	return;
+}
+
+void CascadingCut(F_heapP heap, F_nodeP pointer) {
+	//pointer is parent of delete node
+	F_nodeP parent = pointer->parent;	//get parent of pointer
+	if (parent == NULL) return;	//already in top-level => do not need to cascading cut
+
+	if (pointer->childCut == 0) {
+		pointer->childCut = 1;
+		return;
+	}
+	else {
+		//need to move this tree which has "pointer" as root to top-level
+		MoveFromLevelToTop(heap, pointer, 1);
+
+		CascadingCut(heap, parent);	//tracing up
+	}
 }
 
 /*final api for delete
@@ -102,39 +157,20 @@ void Delete(F_heapP heap, const lld key, const lld value) {
 
 	F_nodeP root = heap->root;
 	F_nodeP pointer = tp->pos;
-
-	F_nodeP leftS = pointer->leftS;
-	F_nodeP rightS = pointer->rightS;
-	F_nodeP parent = pointer->leftS;
-	F_nodeP child = pointer->child;
+	F_nodeP parent = pointer->parent;
 
 	if(pointer == root) {
 		DeleteMin(heap, 0);
 		return ;	//delete done by DeleteMin
 	}
 	
-	if(pointer != leftS){
-		//has sibling
-		pointer->leftS = pointer->rightS = pointer;
-		
-		//remove node from it's sibling
-		leftS->rightS = rightS;
-		rightS->leftS = leftS;
-	}
-
-	//if parent exist and this node has no sibling
-	if(parent != NULL && parent->child == pointer) {
-		if(pointer == leftS) parent->child = NULL;	//parent's child change to NULL	
-		else parent->child = leftS;	//has sibling change parent's child to sibling
-	}
-
-	if(child != NULL) {
-		//has child
-		heap->root = Meld(heap->root, child);	//move child of this node to top-level	
-							//will reset child's parent to NULL in ReturnMinTree()
-	}
+	//the node is not root
+	MoveFromLevelToTop(heap, pointer, 2);	//move subtree to top-level
 
 	free(pointer);	//release address of pointer
+
+	if(parent != NULL) CascadingCut(heap, parent);
+
 	return;
 }
 
@@ -181,34 +217,13 @@ void DecreaseKey(F_heapP heap, const lld key, const lld value, const lld newkey)
 			//remove the node from its sibling
 			pointer->key = newkey;
 
-			//get sibling pointer of pointer
-			F_nodeP leftS, rightS;
-			leftS = pointer->leftS;
-			rightS =pointer->rightS;
-
-			if(pointer != leftS) {
-				//has sibling
-			
-				pointer->leftS = pointer->rightS = pointer;
-
-				//removed node from circular list
-				leftS->rightS = rightS;
-				rightS->leftS = leftS;
-				
-				if(parent->child == pointer) parent->child = leftS;	//reset parent's child
-				
-				heap->root = Meld(heap->root, pointer);		//meld pointer into top-level
-			}
-			else {
-				pointer->leftS = pointer->rightS = pointer;
-
-				parent->child = NULL;	//set parent's child into null
-
-				heap->root = Meld(heap->root, pointer);	
-			}
+			MoveFromLevelToTop(heap, pointer, 1);	//move tree to top-level
 		}
 	}
 
+	if (parent != NULL) CascadingCut(heap, parent);
+
+	return;
 }
 
 //show top-level circular list
@@ -265,10 +280,7 @@ void Consolidation(F_heapP heap) {
 	F_nodeP root = heap->root;
 
 	//empty heap => consolidation is done
-	if (root == NULL)
-	{
-		return;
-	}
+	if (root == NULL) return;
 
 	int maxDepth = root->treeType;	//max depth of top-level tree of heap
 	F_nodeP pointer = root->leftS;	//use to find max tree depth;
@@ -284,7 +296,6 @@ void Consolidation(F_heapP heap) {
 
 	F_nodeP* treeTable = (F_nodeP*)malloc(sizeof(F_nodeP)*maxDepth);	//tree table to record that if there are two tree with same type
 	F_nodeP next;
-
 
 	pointer = root;	//reset pointer
 
@@ -303,6 +314,7 @@ void Consolidation(F_heapP heap) {
 		else {
 			//must to merge now tree into previous tree with same order
 			F_nodeP previousTree = treeTable[treeType];	//previous tree
+			pointer->childCut = 0;	//reset cascading
 
 			//remove this tree from top-level order
 			F_nodeP leftS, rightS;
@@ -313,8 +325,7 @@ void Consolidation(F_heapP heap) {
 			rightS->leftS = leftS;
 
 			//reset now tree's root as a new tree
-			pointer->leftS = pointer;
-			pointer->rightS = pointer;
+			pointer->leftS = pointer->rightS = pointer;
 			pointer->parent = previousTree;	//set parent
 
 			//combine into previous tree
@@ -350,13 +361,13 @@ void DeleteMin(F_heapP heap, int show) {
 		//first maintain child of root
 		F_nodeP leftS = root->leftS;
 		F_nodeP rightS = root->rightS;
-		F_nodeP rChild = root->child;
+		F_nodeP child = root->child;
 
-		if (leftS == root && rChild == NULL) {
+		if (leftS == root && child == NULL) {
 			//this FHeap has only B_{0} B-tree
 			heap->root = NULL;
 		}
-		else if (leftS == root && rChild != NULL) {
+		else if (leftS == root && child != NULL) {
 			//this FHeap has one B-Tree which large than B_{0}
 			heap->root = root->child;
 		}
@@ -372,8 +383,8 @@ void DeleteMin(F_heapP heap, int show) {
 
 			//if original root has child
 			//meld child circular list and now top-level circular list
-			if (rChild != NULL) {
-				heap->root = Meld(heap->root, rChild);
+			if (child != NULL) {
+				heap->root = Meld(heap->root, child);
 			}
 			else {
 				//renew min tree after delete min
