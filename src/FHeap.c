@@ -17,11 +17,6 @@ typedef struct FNode {
 	lld value;
 }FNode;	//節點原型
 
-typedef struct FHeap* F_heapP;
-typedef struct FHeap {
-	F_nodeP root;
-} FHeap;  //Fheap原型
-
 typedef struct Node* TreePointer;	//節點指針
 typedef struct Node {
 	lld key;
@@ -35,6 +30,12 @@ typedef struct BinarySearchTree {
 	TreePointer root;
 }BST;   //二元搜尋樹
 
+typedef struct FHeap* F_heapP;
+typedef struct FHeap {
+	F_nodeP root;
+	BSTP bst;	//bst tree used to search data from feap
+} FHeap;  //Fheap原型
+
 F_nodeP CreateNode(const lld key, const lld value);
 F_nodeP Insert(F_heapP heap, const lld key, const lld value);
 void PutNodeInCir(F_nodeP root, F_nodeP newNode);
@@ -44,7 +45,7 @@ F_nodeP ReturnMinTree(const F_nodeP a);
 void DeleteMin(F_heapP heap, int show);
 void ShowTop(const F_heapP heap, const int n);
 void ShowTopValue(const F_heapP heap, const int n);
-void Delete(F_heapP heap, BSTP bst, const lld key, const lld value);
+void Delete(F_heapP heap, const lld key, const lld value);
 
 /*binary search tree*/
 
@@ -55,33 +56,34 @@ void CopyNode(TreePointer a, const TreePointer b);
 BSTP CreateBST();
 TreePointer Search(BSTP bst, const lld key, const lld value);
 
-void AddData(F_heapP heap, BSTP bst, const lld key, const lld value);
+void AddData(F_heapP heap, const lld key, const lld value);
 
 int main() {
 
 	F_heapP heap = CreateFHeap();
-	BSTP bst = CreateBST();
 
-	AddData(heap, bst, 40, 20);
-	AddData(heap, bst, 40, 30);
-	AddData(heap, bst, 40, 40);
-	AddData(heap, bst, 40, 50);
+	AddData(heap, 1, 1);
+	AddData(heap, 2, 2);
+	AddData(heap, 3, 3);
+	AddData(heap, 4, 4);
 
-	ShowTopValue(heap, 5);
+	ShowTop(heap, 5);
 
-	Delete(heap, bst, 30, 50);
+	Delete(heap, 4, 4);
 
-	ShowTopValue(heap, 5);
+	ShowTop(heap, 5);	
 
-	Delete(heap, bst, 40, 50);
+	Delete(heap, 3, 3);
 
-	ShowTopValue(heap, 5);
+	ShowTop(heap, 5);
 
 	return 0;
 }
 
 //final api for add data
-void AddData(F_heapP heap, BSTP bst, const lld key, const lld value) {
+void AddData(F_heapP heap, const lld key, const lld value) {
+	BSTP bst = heap->bst;	//get bst tree from FHeap
+	
 	F_nodeP np = Insert(heap, key, value);
 	TreePointer tp = NewTreePointer(key, value, np);
 	InsertBST(bst, tp);
@@ -92,56 +94,120 @@ void AddData(F_heapP heap, BSTP bst, const lld key, const lld value) {
 /*final api for delete
 delete node from fheap
 */
-void Delete(F_heapP heap, BSTP bst, const lld key, const lld value) {
+void Delete(F_heapP heap, const lld key, const lld value) {
+	BSTP bst = heap->bst;	//get bst tree from FHeap
+	
 	TreePointer tp = Search(bst, key, value);	//get node from binary search tree;
 	if (tp == NULL) return;
 
 	F_nodeP root = heap->root;
 	F_nodeP pointer = tp->pos;
+
 	F_nodeP leftS = pointer->leftS;
 	F_nodeP rightS = pointer->rightS;
 	F_nodeP parent = pointer->leftS;
 	F_nodeP child = pointer->child;
 
-	//delete element is min element
-	if (pointer == root) {
+	if(pointer == root) {
 		DeleteMin(heap, 0);
-		return;
+		return ;	//delete done by DeleteMin
 	}
-
-	//存在同伴 => 拆散
-	if (leftS != pointer) {
-		//remove node from the circular list
+	
+	if(pointer != leftS){
+		//has sibling
 		pointer->leftS = pointer->rightS = pointer;
-
+		
+		//remove node from it's sibling
 		leftS->rightS = rightS;
 		rightS->leftS = leftS;
 	}
 
-	//check by parent and child
-	if (parent != NULL) {
-		//parent exist => not top-level
-		if (child != NULL) {
-			//child exist
-			parent->child = child;
-		}
-		else {
-			parent->child = NULL;
-		}
+	//if parent exist and this node has no sibling
+	if(parent != NULL && parent->child == pointer) {
+		if(pointer == leftS) parent->child = NULL;	//parent's child change to NULL	
+		else parent->child = leftS;	//has sibling change parent's child to sibling
 	}
-	else {
-		//parent D.N.E.
-		if (child != NULL) {
-			//chile exist
-			if (leftS == pointer) root = child; //top-level
-			else root = Meld(root, child);
-		}
+
+	if(child != NULL) {
+		//has child
+		heap->root = Meld(heap->root, child);	//move child of this node to top-level	
+							//will reset child's parent to NULL in ReturnMinTree()
 	}
-	
+
+	free(pointer);	//release address of pointer
+	return;
 }
 
 //decrease key value of specify node
-void DecreaseKey(F_heapP heap, BSTP bst, const lld key, const lld value, const lld newkey) {
+void DecreaseKey(F_heapP heap, const lld key, const lld value, const lld newkey) {
+	BSTP bst = heap->bst;	//get bst tree from Fheap
+	TreePointer tp = Search(bst, key, value);	//get node by key and value in bst tree
+	
+	if(tp == NULL) return;	//target node is not find
+
+	F_nodeP root = heap->root;	//get pointer of root
+	F_nodeP pointer = tp->pos;	//get pointer of F_nodeP type in TreePointer's node
+	
+	F_nodeP parent = pointer->parent;	//get parent of pointer
+
+	if(pointer == root) {
+		//target of decrease node is root of heap => only do decrease
+		pointer->key = newkey;	//do decrease
+	
+		return; //end decrease
+	}
+	else if(parent == NULL) {
+		//since pointer has no papa => node in top-level
+
+		//no papa of this node
+		pointer->key = newkey;	//do decrease
+		
+		//check if root's key is bigger than pointer => change heap's root pointer
+		if(root->key > pointer->key) {
+			heap->root = pointer;
+		}
+	
+		return;	//end decrease
+	}
+	else {
+		//has parent
+		if(parent->key < newkey) {
+			//newkey is still bigger than papa => just decrease
+			pointer->key = newkey;
+			return;
+		}else {
+			//newkey is smaller than parent
+			//after decrease node
+			//remove the node from its sibling
+			pointer->key = newkey;
+
+			//get sibling pointer of pointer
+			F_nodeP leftS, rightS;
+			leftS = pointer->leftS;
+			rightS =pointer->rightS;
+
+			if(pointer != leftS) {
+				//has sibling
+			
+				pointer->leftS = pointer->rightS = pointer;
+
+				//removed node from circular list
+				leftS->rightS = rightS;
+				rightS->leftS = leftS;
+				
+				if(parent->child == pointer) parent->child = leftS;	//reset parent's child
+				
+				heap->root = Meld(heap->root, pointer);		//meld pointer into top-level
+			}
+			else {
+				pointer->leftS = pointer->rightS = pointer;
+
+				parent->child = NULL;	//set parent's child into null
+
+				heap->root = Meld(heap->root, pointer);	
+			}
+		}
+	}
 
 }
 
@@ -253,7 +319,7 @@ void Consolidation(F_heapP heap) {
 
 			//combine into previous tree
 			if (previousTree->treeType == 0) {
-				//precious tree has no child
+				//previous tree has no child
 				previousTree->child = pointer;
 			}
 			else {
@@ -323,7 +389,7 @@ void DeleteMin(F_heapP heap, int show) {
 	Consolidation(heap);
 }
 
-/*combine 2 top - level circular lists
+/*combine 2 top-level circular lists
 * will return min tree in top-level
 */
 F_nodeP Meld(F_nodeP a, F_nodeP b) {
@@ -358,6 +424,7 @@ F_nodeP ReturnMinTree(const F_nodeP a) {
 			finalAns = pointer;
 		}
 
+		pointer->parent = NULL;	//top-level has no parent
 		pointer = pointer->leftS;	//go to next node
 	}
 
@@ -426,7 +493,10 @@ F_nodeP CreateNode(const lld key, const lld value) {
 //create default FHeap
 F_heapP CreateFHeap() {
 	F_heapP heap = (F_heapP)malloc(sizeof(FHeap));
+	
+	//init FHeap
 	heap->root = NULL;
+	heap->bst = CreateBST();	//init bst tree in FHeap
 
 	return heap;
 }
