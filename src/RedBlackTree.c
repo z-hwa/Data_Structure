@@ -1,10 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
+typedef long long int lld;
 
 // Node structure for Red-Black Tree
 typedef struct Node* NodePointer;   //pointer of node
 typedef struct Node {
-    int data;
+    lld data;
     char color;  // 'R' for red, 'B' for black
     NodePointer parent;
     NodePointer left;
@@ -13,412 +16,518 @@ typedef struct Node {
 
 // Red-Black Tree structure
 typedef struct RedBlackTree* RBTPointer; //pointer of red black tree
-typedef struct RedBlackTree{
+typedef struct RedBlackTree {
     NodePointer root;
 } RedBlackTree;
 
-RBTPointer CreateRBTree();
-NodePointer createNode(int data, char color);
-void leftRotate(RBTPointer tree, NodePointer x);
-void rightRotate(RBTPointer tree, NodePointer y);
-void fixInsertion(RBTPointer tree, NodePointer pointer);
-void insert(RBTPointer tree, int data);
-void inOrderTraversal(NodePointer node);
+void LL(RBTPointer tree, NodePointer mid);
+void RR(RBTPointer tree, NodePointer mid);
+void FixInsertion(RBTPointer tree, NodePointer newNode);
+void Insert(RBTPointer tree, lld data);
+NodePointer CreateNode(lld data);
+RBTPointer CreateTree();
 
-NodePointer findMin(NodePointer node);
-void transplant(RBTPointer tree, NodePointer u, NodePointer v);
-void fixDeletion(RBTPointer tree, NodePointer x);
-void deleteNode(RBTPointer tree, int data);
+void Search(RBTPointer tree, int data);
+void DebugLog(char* message);
+
+void InputWithWord();
+void InputWithDigit();
+
+void Delete(RBTPointer tree, int data);
+void FixDeletion(RBTPointer tree, NodePointer p);
+NodePointer FindChange(RBTPointer tree, NodePointer node);
+void ChangeNodeData(RBTPointer tree, NodePointer oriData, NodePointer changeData);
+void Y2Case2(RBTPointer tree, NodePointer p, int times);
+
+void Traversal(RBTPointer tree, NodePointer p, int level);
+
+RBTPointer tree;
 
 int main() {
-    RBTPointer tree = CreateRBTree();
 
-    // Insert values into the Red-Black Tree
-    insert(tree, 10);
-    insert(tree, 20);
-    insert(tree, 30);
-    insert(tree, 15);
-    insert(tree, 25);
+    tree = CreateTree();
 
-    // Print the Red-Black Tree before deletion
-    printf("In-order traversal before deletion: ");
-    inOrderTraversal(tree->root);
-    printf("\n");
-
-    // Delete a node from the Red-Black Tree
-    deleteNode(tree, 20);
-
-    // Print the Red-Black Tree after deletion
-    printf("In-order traversal after deletion: ");
-    inOrderTraversal(tree->root);
-    printf("\n");
+    InputWithDigit();
 
     return 0;
 }
 
-// Function to find the minimum value node in a Red-Black Tree
-NodePointer findMin(NodePointer node) {
-    while (node->left != NULL) {
-        node = node->left;
-    }
-    return node;
+void Traversal(RBTPointer tree, NodePointer p, int level) {
+    if (p == NULL) return;
+
+    printf("%lld, %c, %d\n", p->data, p->color, level);
+    Traversal(tree, p->left, level + 1);
+    Traversal(tree, p->right, level + 1);
 }
 
-// Function to fix the Red-Black Tree properties after deletion
-void fixDeletion(RBTPointer tree, NodePointer x) {
-    while (x != tree->root && (x == NULL || x->color == 'B')) {
-        //x at the left side of its parent
-        if (x == x->parent->left) {
-            NodePointer w = x->parent->right;
+void Delete(RBTPointer tree, int data) {
+    NodePointer p = tree->root;
 
-            //y2's case3 => change to case 1 or 2
-            if (w->color == 'R') {
-                w->color = 'B';
-                x->parent->color = 'R';
-                leftRotate(tree, x->parent);
-                w = x->parent->right;
-            }
-
-            if ((w->left == NULL || w->left->color == 'B') &&
-                (w->right == NULL || w->right->color == 'B')) {
-                //y2's case 2
-                w->color = 'R';
-                x = x->parent;  //check double black
-            }
-            else {
-                //y2's case 1
-                if (w->right == NULL || w->right->color == 'B') {
-                    if (w->left != NULL) w->left->color = 'B';
-                    w->color = 'R';
-                    rightRotate(tree, w);
-                    w = x->parent->right;
-                }
-                w->color = x->parent->color;    //keep original node's color
-
-                //keep structure of RBTree
-                x->parent->color = 'B';
-                if (w->right != NULL) w->right->color = 'B';
-
-                leftRotate(tree, x->parent);
-                x = tree->root;
-            }
-        }
-        else {
-            Node* w = x->parent->left;
-            if (w->color == 'R') {
-                w->color = 'B';
-                x->parent->color = 'R';
-                rightRotate(tree, x->parent);
-                w = x->parent->left;
-            }
-            if ((w->right == NULL || w->right->color == 'B') &&
-                (w->left == NULL || w->left->color == 'B')) {
-                w->color = 'R';
-                x = x->parent;
-            }
-            else {
-                if (w->left == NULL || w->left->color == 'B') {
-                    if (w->right != NULL) w->right->color = 'B';
-                    w->color = 'R';
-                    leftRotate(tree, w);
-                    w = x->parent->left;
-                }
-                w->color = x->parent->color;
-                x->parent->color = 'B';
-                if (w->left != NULL) w->left->color = 'B';
-                rightRotate(tree, x->parent);
-                x = tree->root;
-            }
-        }
+    //find the data which we want to delete
+    while (p != NULL) {
+        if (p->data > data) p = p->left;
+        else if (p->data < data) p = p->right;
+        else break;
     }
 
-    if (x != NULL) x->color = 'B';
-}
-
-// Function to delete a node from the Red-Black Tree
-void deleteNode(RBTPointer tree, int data) {
-    NodePointer pointer = tree->root;
-
-    //find the data which wants to delete
-    while (pointer != NULL) {
-        if (data < pointer->data) {
-            pointer = pointer->left;
-        }
-        else if (data > pointer->data) {
-            pointer = pointer->right;
-        }
-        else {
-            //find the data
-            break;
-        }
-    }
-
-    if (pointer == NULL) {
-        printf("Node with data %d not found.\n", data);
+    //do not find data which we want to delet
+    if (p == NULL) {
         return;
     }
 
-    NodePointer y = pointer;
-    char y_original_color = y->color;
-    NodePointer x;
+    NodePointer changeData = FindChange(tree, p->right);   /* find change data under p
+                                                       if don't need change => this data is already in the leaf
+                                                       then changeData will be NULL
+                                                       */
 
-    if (pointer->left == NULL) {
-        //replacing pointer with right branch 
-        x = pointer->right;
-        transplant(tree, pointer, pointer->right);
+                                                       //if change data exist => go change
+    if (changeData != NULL) {
+        ChangeNodeData(tree, p, changeData);
+        p = changeData; //since we change => p must reset
     }
-    else if (pointer->right == NULL) {
-        //replacing pointer with left branch 
-        x = pointer->left;
-        transplant(tree, pointer, pointer->left);
+
+    FixDeletion(tree, p);
+}
+
+//to keep property of red black tree
+void FixDeletion(RBTPointer tree, NodePointer p) {
+
+    if (p == tree->root) {
+        //only root in this tree
+        tree->root = NULL;
+        free(p);
+        return;
+    }
+    else if (p->color == 'R') {
+        //method like delete y
+        NodePointer parent = p->parent;
+
+        if (parent->left == p) parent->left = NULL;
+        else parent->right = NULL;
+
+        free(p);
+        return;
+    }
+    else if (p->color == 'B' && p->left != NULL) {
+        //method like delete y1 with child at left
+        NodePointer left = p->left;
+
+        ChangeNodeData(tree, p, left);
+        p->left = NULL;
+
+        free(left);
+        return;
+    }
+    else if (p->color == 'B' && p->right != NULL) {
+        //method like delete y1 with child at right
+        NodePointer right = p->right;
+
+        ChangeNodeData(tree, p, right);
+        p->right = NULL;
+
+        free(right);
+        return;
     }
     else {
-        //let min child to set pointer's seat
-        y = findMin(pointer->right);
-        y_original_color = y->color;
-        x = y->right;
+        Y2Case2(tree, p, 0);
+    }
+}
 
-        if (y->parent == pointer) {
-            if (x != NULL) x->parent = y;
+void Y2Case2(RBTPointer tree, NodePointer p, int times) {
+    //method like y2
+    NodePointer parent = p->parent;
+    NodePointer sibling;
+    char ori_color = 'R';
+
+    //setting value of sibling
+    if (p == parent->left) sibling = parent->right;
+    else sibling = parent->left;
+
+    //child of sibling
+    NodePointer left, right;
+    left = sibling->left;
+    right = sibling->right;
+
+    //first into y2's case2, delete p
+    if (times == 0) {
+        //delete p
+        if (parent->left == p) parent->left = NULL;
+        else parent->right = NULL;
+        free(p);
+    }
+
+    if (left != NULL && left->color == 'R') {
+        //y2 case 1
+        ori_color = parent->color;
+
+        if (sibling == parent->left) {
+            LL(tree, sibling);
+
+            //color part
+            left->color = 'B';
+            sibling->color = ori_color;
+            parent->color = 'B';
         }
         else {
-            transplant(tree, y, y->right);
-            y->right = pointer->right;
-            if (y->right != NULL) y->right->parent = y;
+            LL(tree, left);
+            RR(tree, left);
+
+            //color part
+            left->color = ori_color;
+            sibling->color = 'B';
+            parent->color = 'B';
         }
 
-        transplant(tree, pointer, y);
-        y->left = pointer->left;
-        y->left->parent = y;
-        y->color = pointer->color;
+        //update parent
+        parent = p->parent;
+        if (parent->left == p) parent->left = NULL;
+        else parent->right = NULL;
+
+        free(p);
+        return;
     }
+    else if (right != NULL && right->color == 'R') {
+        //y2 case 1
+        ori_color = parent->color;
 
-    free(pointer);
+        if (sibling == parent->right) {
+            RR(tree, sibling);
 
-    if (y_original_color == 'B') {
-        fixDeletion(tree, x);
+            //color part
+            sibling->left->color = 'B';
+            sibling->color = ori_color;
+            parent->color = 'B';
+        }
+        else {
+            RR(tree, left);
+            LL(tree, left);
+
+            //color part
+            left->color = ori_color;
+            sibling->color = 'B';
+            parent->color = 'B';
+        }
+
+        //update parent
+        parent = p->parent;
+        if (parent->left == p) parent->left = NULL;
+        else parent->right = NULL;
+
+        free(p);
+        return;
+    }
+    else if ((left != NULL && left->color == 'B') || (right != NULL && right->color == 'B')) {
+        //y2's case 2
+        sibling->color = 'R';
+        if (p != NULL) p->color = 'B';
+
+        if (parent->color == 'R') parent->color = 'B';
+        else if (parent != tree->root) {
+            parent->color = 'B';
+
+            //double black => change people do
+            p = p->parent;
+            Y2Case2(tree, p, 1);
+        }
+    }
+    else if (sibling->color == 'R') {
+        //y2's case 3
+        LL(tree, sibling);  //moving sibling as parent of it's parent
+
+        sibling->color = 'B';
+        parent->color = 'R';
+        Y2Case2(tree, p, 1);
     }
 }
 
-// Helper function to replace one subtree with another
-void transplant(RBTPointer tree, NodePointer u, NodePointer v) {
-    
-    NodePointer uParent = u->parent;    //u's parents
+//just exchange data in each node
+void ChangeNodeData(RBTPointer tree, NodePointer oriData, NodePointer changeData) {
+    lld temp = oriData->data;
+    oriData->data = changeData->data;
+    changeData->data = temp;
+}
 
-    if (uParent == NULL) {
-        //u is null => this is a empty tree => tree set as v
-        tree->root = v;
+//find data which should be change under delete method
+NodePointer FindChange(RBTPointer tree, NodePointer node) {
+    NodePointer p = node;
+    NodePointer rec = p;
+
+    while (p != NULL)
+    {
+        rec = p;
+        p = p->left;   //find data under p's parent which is most smaller
     }
-    else if (u == uParent->left) {
-        //put v as left child of uParent
-        u->parent->left = v;
+
+    if (rec == node) {
+        if (rec->color == 'R') return NULL; //node's paremt and node is in the same node in 2-3-4 tree which is leaf
+        else return rec;    //node is child of its parent in 2-3-4 tree
     }
     else {
-        //put v as rigt child of uParent
-        u->parent->right = v;
-    }
-
-    //if v is exist => v's parent set as u's parent
-    if (v != NULL) {
-        v->parent = uParent;
+        //find the change data
+        return rec;
     }
 }
 
-//Create a RBTree
-RBTPointer CreateRBTree() {
-    RBTPointer tree = (RBTPointer)malloc(sizeof(RedBlackTree)); //allocate space for tree
+//input mode with input digit
+void InputWithDigit() {
+    char order[10] = {};
+    lld data;
 
+    while (1) {
+        scanf("%s", order);
+
+        if (strcmp(order, "insert") == 0) {
+            scanf("%lld", &data);
+            Insert(tree, data);
+        }
+        else if (strcmp(order, "search") == 0) {
+            scanf("%lld", &data);
+            Search(tree, data);
+        }
+        else if (strcmp(order, "quit") == 0) {
+            break;
+        }
+    }
+}
+
+//input mode with input word
+void InputWithWord() {
+    char order[10] = {};
+    lld data;
+
+    while (1) {
+        scanf("%s", order);
+
+        char word;
+        if (strcmp(order, "insert") == 0) {
+            getchar();
+            word = getchar();
+            data = word - 'A';
+
+            Insert(tree, data);
+        }
+        else if (strcmp(order, "search") == 0) {
+            getchar();
+            word = getchar();
+            data = word - 'A';
+            Search(tree, data);
+        }
+        else if (strcmp(order, "quit") == 0) {
+            break;
+        }
+    }
+}
+
+//find data in the tree
+void Search(RBTPointer tree, int data) {
+    NodePointer p = tree->root;
+
+    while (p != NULL) {
+        if (p->data > data) p = p->left;
+        else if (p->data < data) p = p->right;
+        else break;
+    }
+
+    if (p != NULL) {
+        if (p->color == 'R') printf("red\r\n");
+        else if (p->color == 'B') printf("black\r\n");
+    }
+    else {
+        printf("Not found\r\n");
+    }
+
+    fflush(stdout);
+}
+
+//create a red black tree
+RBTPointer CreateTree() {
+    RBTPointer tree = (RBTPointer)malloc(sizeof(RedBlackTree));
     tree->root = NULL;
+
     return tree;
 }
 
-// Function to create a new node with the given data and color
-NodePointer createNode(int data, char color) {
-    NodePointer newNode = (NodePointer)malloc(sizeof(Node));
-    newNode->data = data;
-    newNode->color = color;
+//if there are 2 red side happens => do this
+//mid is the node which should sat in the middle after rotation
+void LL(RBTPointer tree, NodePointer mid) {
+    NodePointer d = mid->right;
+    NodePointer up = mid->parent;
+    NodePointer ancester = mid->parent->parent;
 
-    newNode->parent = NULL;
-    newNode->left = NULL;
-    newNode->right = NULL;
-
-    return newNode;
-}
-
-// Function to perform left rotation
-//For two node x & y
-//divide data to 3 branch
-void leftRotate(RBTPointer tree, NodePointer x) {
-    NodePointer y = x->right;   //get pointer of y, which located at x's right
-    NodePointer yLeft = y->left;   //get data branch y-L 
-    NodePointer xParent = x->parent; //get parent of x
-
-    x->right = yLeft; //set data branch yL to be x's right child
-
-    //if data yL is not empty => set its parent to x
-    if (yLeft != NULL) {
-        yLeft->parent = x;
-    }
-
-    //manage relation of y and x's parent
-    y->parent = xParent;
-    if (xParent == NULL) {
-        //x is root originally
-        tree->root = y;
-    }
-    else if (x == xParent->left) {
-        xParent->left = y;
+    //move mid to the middle seat of up, down and mid
+    if (ancester != NULL) {
+        if (ancester->right == up) ancester->right = mid;
+        else if (ancester->left == up) ancester->left = mid;
     }
     else {
-        xParent->right = y;
+        tree->root = mid;   //this is a root node
     }
+    mid->parent = ancester;
 
-    y->left = x;
-    x->parent = y;
+    //move up to the right side of mid
+    mid->right = up;
+    up->parent = mid;
+
+    //move d to the left child of up
+    up->left = d;
+    if (d != NULL) d->parent = up;
 }
 
-// Function to perform right rotation
-//For two node x & y
-//divide data to 3 branch
-void rightRotate(RBTPointer tree, NodePointer y) {
-    NodePointer x = y->left;
-    NodePointer xRight = x->right; //right child of x
-    NodePointer yParent = y->parent;    //parent of y
+void RR(RBTPointer tree, NodePointer mid) {
+    NodePointer d = mid->left;
+    NodePointer up = mid->parent;
+    NodePointer ancester = mid->parent->parent;
 
-    //moving x right data to y's left
-    y->left = xRight;
-    if (xRight != NULL) {
-        xRight->parent = y;
-    }
-
-    //deal with relation of x's parent and y
-    x->parent = yParent;
-    if (yParent == NULL) {
-        tree->root = x;
-    }
-    else if (y == yParent->left) {
-        yParent->left = x;
+    //move mid to the middle seat of up, down and mid
+    if (ancester != NULL) {
+        if (ancester->right == up) ancester->right = mid;
+        else if (ancester->left == up) ancester->left = mid;
     }
     else {
-        yParent->right = x;
+        tree->root = mid;
     }
+    mid->parent = ancester;
 
-    x->right = y;
-    y->parent = x;
+    //move up to the right side of mid
+    mid->left = up;
+    up->parent = mid;
+
+    //mode d to the left child of up
+    up->right = d;
+    if (d != NULL) d->parent = up;
 }
 
-// Function to fix the Red-Black Tree properties after insertion
-void fixInsertion(RBTPointer tree, NodePointer pointer) {
-    NodePointer pParent = pointer->parent;
+//keep property of Red Black Tree
+//assume new node is not root node
+void FixInsertion(RBTPointer tree, NodePointer newNode) {
+    NodePointer parent = newNode->parent;
 
-    while (pointer != NULL && pParent != NULL && pParent->color == 'R') {
-        //this pointer's parent is in a 2 or 3 node
+    if (parent == NULL) return;
 
-        pParent = pointer->parent;  //update pointer's parent
-        NodePointer pPParent = pParent->parent; //get grandParent of pointer
+    NodePointer ancester = newNode->parent->parent;
+    NodePointer sibling;
 
-        if (pParent == pPParent->left) {
-            //parent is in left side of ancester
+    if (ancester == NULL) return;   //this tree are still under level 1 => double red point will not happen
 
-            NodePointer nPPRight = pPParent->right;
-            if (nPPRight != NULL && nPPRight->color == 'R') {
-                //3 node
-                //extract
+    //case 1
+    if (parent->color == 'B') return;   //don't violate rule of RBTree
 
-                pointer->parent->color = 'B';
-                nPPRight->color = 'B';
-                pointer->parent->parent->color = 'R';
-                pointer = pointer->parent->parent;
-            }
-            else {
-                //2 node => LR rotate
+    //setting sibling
+    if (parent == ancester->left) sibling = ancester->right;
+    else sibling = ancester->left;
 
-                if (pointer == pointer->parent->right) {
-                    pointer = pointer->parent;
-                    leftRotate(tree, pointer);
-                }
-                pointer->parent->color = 'B';
-                pointer->parent->parent->color = 'R';
-                rightRotate(tree, pointer->parent->parent);
-            }
+    //case 2
+    if (newNode == parent->left && (sibling == NULL || sibling->color == 'B')) {
+        if (parent == ancester->left) {
+            //case 2 => do LL
+            LL(tree, parent);
+            parent->color = 'B';
+            ancester->color = 'R';
+            newNode->color = 'R';
         }
-        else {
-            //parent is in the right side of ancester
-
-            NodePointer pPPLeft = pPParent->left;
-            if (pPPLeft != NULL && pPPLeft->color == 'R') {
-                //3 node
-                //extract
-
-                pointer->parent->color = 'B';
-                pPPLeft->color = 'B';
-                pointer->parent->parent->color = 'R';
-                pointer = pointer->parent->parent;
-            }
-            else {
-                //2 node
-                //RL rotate
-
-                if (pointer == pointer->parent->left) {
-                    pointer = pointer->parent;
-                    rightRotate(tree, pointer);
-                }
-                pointer->parent->color = 'B';
-                pointer->parent->parent->color = 'R';
-                leftRotate(tree, pointer->parent->parent);
-            }
+        else if (parent == ancester->right) {
+            //case 2 => do LR
+            LL(tree, newNode);
+            RR(tree, newNode);
+            parent->color = 'R';
+            ancester->color = 'R';
+            newNode->color = 'B';
         }
+        return;
+    }
+    else if (newNode == parent->right && (sibling == NULL || sibling->color == 'B')) {
+        if (parent == ancester->right) {
+            //case 2 => do RR
+            RR(tree, parent);
+            parent->color = 'B';
+            ancester->color = 'R';
+            newNode->color = 'R';
+        }
+        else if (parent == ancester->left) {
+            //case 2 => do RL
+            RR(tree, newNode);
+            LL(tree, newNode);
+            parent->color = 'R';
+            ancester->color = 'R';
+            newNode->color = 'B';
+        }
+        return;
     }
 
-    //confirm tree's root is black
-    tree->root->color = 'B';
+    //case 3
+    if (sibling != NULL && sibling->color == 'R' && parent->color == 'R') {
+        sibling->color = 'B';
+        parent->color = 'B';
+
+        if (ancester != tree->root) ancester->color = 'R';
+
+        //promotion
+        newNode = ancester;
+        if (newNode != tree->root) FixInsertion(tree, newNode);
+    }
 }
 
-// Function to insert a value into the Red-Black Tree
-void insert(RBTPointer tree, int data) {
-    NodePointer newNode = createNode(data, 'R');
-    NodePointer pointer = NULL;
-    NodePointer tracing = tree->root;
+//insert node into tree
+//if this node is not root => do FixInsertion
+void Insert(RBTPointer tree, lld data) {
 
-    while (tracing != NULL) {
-        pointer = tracing;   //set pointer to point root
+    NodePointer newNode = CreateNode(data);
+    NodePointer target = NULL;
+    NodePointer pointer = tree->root;
 
-        //find right pos to put data
-        if (newNode->data < tracing->data) {
-            tracing = tracing->left;
+    while (pointer != NULL) {
+        target = pointer;
+
+        if (pointer->data > data) {
+            pointer = pointer->left;
         }
-        else if(newNode->data > tracing->data) {
-            tracing = tracing->right;
+        else if (pointer->data < data) {
+            pointer = pointer->right;
         }
         else {
-            //there is already exist same data
+            //same data exist
             return;
         }
     }
 
-    //pointer is the node which we find above
-    newNode->parent = pointer;
-
-    //put node into the tree
-    if (pointer == NULL) {
-        //there is no node in this RBT
+    if (target == NULL) {
+        //no element in tree
+        //this data is new root
+        newNode->color = 'B';
         tree->root = newNode;
     }
-    else if (newNode->data < pointer->data) {
-        pointer->left = newNode;
-    }
     else {
-        pointer->right = newNode;
-    }
+        newNode->parent = target;
 
-    fixInsertion(tree, newNode);
+        //put node under target's child
+        if (target->data > data) {
+            target->left = newNode;
+        }
+        else {
+            target->right = newNode;
+        }
+
+        FixInsertion(tree, newNode);
+    }
 }
 
-// Function to print the Red-Black Tree in-order
-void inOrderTraversal(NodePointer node) {
-    if (node != NULL) {
-        inOrderTraversal(node->left);
-        printf("%d%c ", node->data, node->color);
-        inOrderTraversal(node->right);
-    }
+//print out debug message
+void DebugLog(char* message) {
+    printf("%s\n", message);
+    fflush(stdout);
+    return;
+}
+
+//create default node with color red
+NodePointer CreateNode(lld data) {
+    NodePointer newNode = (NodePointer)malloc(sizeof(Node));
+
+    newNode->color = 'R';
+    newNode->data = data;
+
+    newNode->left = NULL;
+    newNode->right = NULL;
+    newNode->parent = NULL;
+
+    return newNode;
 }
